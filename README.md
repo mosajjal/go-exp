@@ -19,3 +19,7 @@ Usage of spitcurl:
   -upstream string
     	upstream URL. Empty will return an empty 200 for all requests, Example: https://www.youtube.com
 ```
+
+sample output
+
+![screenshot](static/screenshot.png)

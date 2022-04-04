@@ -31,7 +31,7 @@ func main() {
 		if err != nil {
 			log.Fatal("fatal Error: ", err)
 		}
-		certFile, err := ioutil.TempFile("/tmp", "spitcurl-cert")
+		certFile, err := ioutil.TempFile(os.TempDir(), "spitcurl.pem")
 		if err != nil {
 			log.Fatal("fatal Error: ", err)
 		}
@@ -39,7 +39,7 @@ func main() {
 		certFile.Write(cert)
 		*tlsCert = certFile.Name()
 
-		keyFile, err := ioutil.TempFile("/tmp", "spitcurl-key")
+		keyFile, err := ioutil.TempFile(os.TempDir(), "spitcurl.key")
 		if err != nil {
 			log.Fatal("fatal Error: ", err)
 		}

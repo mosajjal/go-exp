@@ -16,7 +16,7 @@ import (
 func main() {
 	address := flag.String("address", "127.0.0.1", "Bind address")
 	port := flag.Uint("port", 8080, "listen port")
-	upstream := flag.String("upstream", "", "upstream URL. Empty will return an empty 200 for all requests, Example: https://www.youtube.com")
+	upstream := flag.String("upstream", "", "upstream URL. Empty will return the curl for all requests, Example: https://www.youtube.com")
 	mode := flag.String("mode", "http", "server type to use. options: http, tls.")
 	tlsCert := flag.String("tlsCert", "", "tls certificate to use. will use self-signed if empty")
 	tlsKey := flag.String("tlsKey", "", "tls certificate key to use. will use self-signed if empty")
@@ -64,6 +64,7 @@ func main() {
 		command, _ := http2curl.GetCurlCommand(r)
 		fmt.Println(command.String())
 		w.WriteHeader(200)
+		w.Write([]byte(command.String()))
 	}
 
 	if *upstream == "" {

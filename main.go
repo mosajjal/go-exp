@@ -10,11 +10,10 @@ import (
 	"os"
 
 	log "github.com/sirupsen/logrus"
-	"moul.io/http2curl"
+	"moul.io/http2curl/v2"
 )
 
 func main() {
-
 	address := flag.String("address", "127.0.0.1", "Bind address")
 	port := flag.Uint("port", 8080, "listen port")
 	upstream := flag.String("upstream", "", "upstream URL. Empty will return an empty 200 for all requests, Example: https://www.youtube.com")
@@ -56,14 +55,14 @@ func main() {
 	handlerProxy := func(p *httputil.ReverseProxy) func(http.ResponseWriter, *http.Request) {
 		return func(w http.ResponseWriter, r *http.Request) {
 			command, _ := http2curl.GetCurlCommand(r)
-			fmt.Println(command)
+			fmt.Println(command.String())
 			r.Host = remote.Host
 			p.ServeHTTP(w, r)
 		}
 	}
 	handlerEmpty := func(w http.ResponseWriter, r *http.Request) {
 		command, _ := http2curl.GetCurlCommand(r)
-		fmt.Println(command)
+		fmt.Println(command.String())
 		w.WriteHeader(200)
 	}
 
@@ -86,5 +85,4 @@ func main() {
 			http.ListenAndServeTLS(fmt.Sprintf("%v:%v", *address, *port), *tlsCert, *tlsKey, nil),
 		)
 	}
-
 }

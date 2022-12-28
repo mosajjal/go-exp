@@ -1,4 +1,4 @@
-module github.com/mosajjal/siemsend
+module github.com/mosajjal/go-exp/siemsend
 
 go 1.17
 

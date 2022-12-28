@@ -1,4 +1,4 @@
-module mosajjal/sniplex
+module github.com/mosajjal/go-exp/sniplex
 
 go 1.19
 

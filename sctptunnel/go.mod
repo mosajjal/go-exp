@@ -1,4 +1,4 @@
-module mosajjal/sctp-tunnel
+module github.com/mosajjal/go-exp/sctptunnel
 
 go 1.19
 

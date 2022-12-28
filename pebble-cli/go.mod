@@ -1,4 +1,4 @@
-module github.com/mosajjal/pebble-cli
+module github.com/mosajjal/go-exp/pebble-cli
 
 go 1.17
 

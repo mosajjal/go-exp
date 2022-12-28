@@ -1,4 +1,4 @@
-module github.com/mosajjal/spitcurl
+module github.com/mosajjal/go-exp/spitcurl
 
 go 1.16
 

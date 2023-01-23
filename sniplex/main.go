@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slog"
@@ -66,7 +67,7 @@ func runHTTPS(bind string, port int) {
 	// 	go handle443(c)
 	// }
 
-	pending, complete := make(chan *net.TCPConn), make(chan *net.TCPConn)
+	pending, complete := make(chan *net.TCPConn), make(chan *net.TCPConn, 100)
 
 	for i := 0; i < 1024; i++ {
 		go handleConn(pending, complete)
@@ -126,11 +127,17 @@ func handle443(conn *net.TCPConn) {
 	// 	return nil
 	// }
 	slog.Info("establishing connection", "remote_ip", rAddr, "host", sni)
-	target, err := net.DialTCP("tcp", nil, &net.TCPAddr{IP: rAddr, Port: rPort})
+	// target, err := net.DialTCP("tcp", nil, &net.TCPAddr{IP: rAddr, Port: rPort})
+	target, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", rAddr, rPort), 5*time.Second)
 	if err != nil {
 		slog.Error("could not connect to target", err)
 		return
 	}
+	err = target.SetReadDeadline(time.Now().Add(30 * time.Second))
+	if err != nil {
+		slog.Error("failed to set deadline", err)
+	}
+
 	defer target.Close()
 	if _, err := target.Write(incoming[:n]); err != nil {
 		return
@@ -190,7 +197,10 @@ func handleConn(in <-chan *net.TCPConn, out chan<- *net.TCPConn) {
 }
 
 func closeConn(in <-chan *net.TCPConn) {
-	for conn := range in {
-		conn.Close()
+	for {
+		select {
+		case conn := <-in:
+			conn.Close()
+		}
 	}
 }

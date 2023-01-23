@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/spf13/cobra v1.6.1
-	golang.org/x/exp v0.0.0-20221227203929-1b447090c38c
+	golang.org/x/exp v0.0.0-20230118134722-a68e582fa157
 )
 
 require (

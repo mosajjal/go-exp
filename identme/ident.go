@@ -1,24 +1,29 @@
 package main
 
 import (
+	"encoding/json"
+	"flag"
+	"fmt"
 	"log"
 	"net/http"
-
-	"github.com/gin-gonic/gin"
+	"net/netip"
 )
 
 func main() {
-	gin.SetMode(gin.ReleaseMode)
-	r := gin.Default()
-	r.GET("/", func(c *gin.Context) {
-		clientIP := c.ClientIP() + "\n"
-		c.Data(http.StatusOK, "text/html", []byte(clientIP))
+
+	l := flag.String("l", ":8080", "listen address")
+	flag.Parse()
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		ipport, _ := netip.ParseAddrPort(r.RemoteAddr)
+		fmt.Fprint(w, ipport.Addr().String())
 	})
-	r.GET("/json", func(c *gin.Context) {
-		clientIP := c.ClientIP()
-		c.JSON(200, gin.H{
-			"ip": clientIP,
-		})
+
+	http.HandleFunc("/json", func(w http.ResponseWriter, r *http.Request) {
+		ipport, _ := netip.ParseAddrPort(r.RemoteAddr)
+		j, _ := json.Marshal(map[string]string{"ip": ipport.Addr().String()})
+		fmt.Fprint(w, string(j))
 	})
-	log.Fatalln(r.Run(":80"))
+	log.Println("Listening on", *l)
+	log.Fatalln(http.ListenAndServe(*l, nil))
 }

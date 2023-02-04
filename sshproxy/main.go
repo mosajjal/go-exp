@@ -26,6 +26,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/gliderlabs/ssh"
@@ -42,13 +43,85 @@ func isLocal(host string) bool {
 	return false
 }
 
+type ipTime struct {
+	IP net.IP
+	TS time.Time
+}
+
 type configuration struct {
 	Listen         string            `yaml:"listen"`
 	Users          map[string]string `yaml:"users"`
 	SessionPerUser int               `yaml:"session_per_user"`
 	Hostkey        string            `yaml:"hostkey"`
 	pKey           ssh.Signer
-	activeSessions map[string]int
+	// map from user to a list of IPs and timestamps.
+	activeSessions map[string][]ipTime
+	rwLock         sync.RWMutex
+}
+
+func (conf *configuration) connPolicy(user string, ipport net.Addr) (dropping bool) { // return true if the connection should be dropped
+	ipStr, _, err := net.SplitHostPort(ipport.String())
+	if err != nil {
+		log.Printf("failed to parse ip:port: %s", err)
+		return true
+	}
+	ip := net.ParseIP(ipStr)
+
+	conf.rwLock.Lock()
+	defer conf.rwLock.Unlock()
+	// check if sessionperuser is configured
+	if conf.SessionPerUser <= 0 {
+		return false
+	}
+
+	// check if we have any sessions for this user
+	// if the user has no sessions, add a new one and allow the connection
+	if _, ok := conf.activeSessions[user]; !ok {
+		conf.activeSessions[user] = []ipTime{{
+			IP: ip,
+			TS: time.Now(),
+		}}
+		return false
+	} else {
+		// if the user has sessions, check if we have a session from the same IP as before
+		for i, s := range conf.activeSessions[user] {
+			// if we already have a session from this IP, update the timestamp
+			if s.IP.Equal(ip) {
+				conf.activeSessions[user][i].TS = time.Now()
+				dropping = false
+			}
+			// check if the session is older than 5 minutes
+			if time.Since(s.TS) > 30*time.Second {
+				// remove the old session
+				conf.activeSessions[user] = append(conf.activeSessions[user][:i], conf.activeSessions[user][i+1:]...)
+				break
+			}
+
+		}
+
+		// check the user's current connection count against the limit
+		if len(conf.activeSessions[user]) > conf.SessionPerUser {
+			log.Printf("too many sessions for user %s with IPs %v", user, conf.activeSessions[user])
+			return true
+		}
+
+		if !dropping {
+
+			// double check if the IP is not already in the list
+			for _, s := range conf.activeSessions[user] {
+				if s.IP.Equal(ip) {
+					return false
+				}
+			}
+			// new IP for this user, add a new session
+			conf.activeSessions[user] = append(conf.activeSessions[user], ipTime{
+				IP: ip,
+				TS: time.Now(),
+			})
+		}
+	}
+
+	return false
 }
 
 func main() {
@@ -58,7 +131,8 @@ func main() {
 
 	// read the configuration file
 	conf := configuration{}
-	conf.activeSessions = make(map[string]int)
+	conf.rwLock = sync.RWMutex{}
+	conf.activeSessions = make(map[string][]ipTime)
 	confFile, err := os.ReadFile(*configPath)
 	if err != nil {
 		panic("failed to open conf.yaml: " + err.Error())
@@ -73,20 +147,8 @@ func main() {
 	server := &ssh.Server{
 		Addr: conf.Listen,
 		Handler: func(s ssh.Session) {
-			t1 := time.Now()
-			// check if the user has reached the maximum number of sessions
-			if _, ok := conf.activeSessions[s.User()]; ok {
-				conf.activeSessions[s.User()]++
-			} else {
-				conf.activeSessions[s.User()] = 1
-			}
-			if conf.activeSessions[s.User()] > conf.SessionPerUser {
-				io.WriteString(s, "You have reached the maximum number of sessions. Please wait for one of your sessions to end.")
-				s.Exit(1)
-			}
-
-			io.WriteString(s, "This server is only for port forwarding. please use -L, -R or -D options with ssh. Press Ctrl+C to exit.")
-			log.Println("new session from " + s.User())
+			io.WriteString(s, "This server is only for port forwarding. ")
+			io.WriteString(s, "please use -L, -R or -D options. Press Ctrl+C to exit.")
 			buf := make([]byte, 1)
 			for {
 				_, err := s.Read(buf)
@@ -98,13 +160,10 @@ func main() {
 					break
 				}
 			}
-			// remove the session from the activeSessions map
-			conf.activeSessions[s.User()]--
-			log.Println("session from " + s.User() + " ended. duration: " + time.Since(t1).String())
 			s.Exit(0)
 		},
+		HostSigners: []ssh.Signer{conf.pKey},
 		PasswordHandler: func(ctx ssh.Context, pass string) bool {
-
 			if _, ok := conf.Users[ctx.User()]; ok {
 				// calculate the sha256 of the password
 				if conf.Users[ctx.User()] == pass {
@@ -113,20 +172,19 @@ func main() {
 			}
 			return false
 		},
-		HostSigners: []ssh.Signer{conf.pKey},
 		LocalPortForwardingCallback: func(ctx ssh.Context, dhost string, dport uint32) bool {
-			if isLocal(dhost) {
+			if isLocal(dhost) || conf.connPolicy(ctx.User(), ctx.RemoteAddr()) {
 				return false
 			}
 			return true
 		},
 		ReversePortForwardingCallback: func(ctx ssh.Context, dhost string, dport uint32) bool {
-			if isLocal(dhost) {
+			if isLocal(dhost) || conf.connPolicy(ctx.User(), ctx.RemoteAddr()) {
 				return false
 			}
 			return true
 		},
-
+		IdleTimeout: 300 * time.Second,
 		ChannelHandlers: map[string]ssh.ChannelHandler{
 			"direct-tcpip": ssh.DirectTCPIPHandler,
 			"session":      ssh.DefaultSessionHandler,

@@ -165,8 +165,8 @@ func main() {
 		HostSigners: []ssh.Signer{conf.pKey},
 		PasswordHandler: func(ctx ssh.Context, pass string) bool {
 			if _, ok := conf.Users[ctx.User()]; ok {
-				// calculate the sha256 of the password
 				if conf.Users[ctx.User()] == pass {
+					log.Printf("user %s connected from %s", ctx.User(), ctx.RemoteAddr())
 					return true
 				}
 			}

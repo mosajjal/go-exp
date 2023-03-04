@@ -66,7 +66,6 @@ func (conf *configuration) connPolicy(user string, ipport net.Addr) (dropping bo
 		return true
 	}
 	ip := net.ParseIP(ipStr)
-
 	conf.rwLock.Lock()
 	defer conf.rwLock.Unlock()
 	// check if sessionperuser is configured
@@ -90,7 +89,7 @@ func (conf *configuration) connPolicy(user string, ipport net.Addr) (dropping bo
 				conf.activeSessions[user][i].TS = time.Now()
 				dropping = false
 			}
-			// check if the session is older than 5 minutes
+			// check if the session is older than 30 seconds
 			if time.Since(s.TS) > 30*time.Second {
 				// remove the old session
 				conf.activeSessions[user] = append(conf.activeSessions[user][:i], conf.activeSessions[user][i+1:]...)
@@ -143,6 +142,24 @@ func main() {
 		panic("failed to parse hostkey: " + err.Error())
 	}
 
+	// clean up old sessions every 10 seconds
+	go func() {
+		for {
+			time.Sleep(10 * time.Second)
+			for user, _ := range conf.activeSessions {
+				for i, s := range conf.activeSessions[user] {
+					// check if the session is older than 30 seconds
+					if time.Since(s.TS) > 30*time.Second {
+						// remove the old session
+						conf.activeSessions[user] = append(conf.activeSessions[user][:i], conf.activeSessions[user][i+1:]...)
+						break
+					}
+
+				}
+			}
+		}
+	}()
+
 	// set up a SSH server with a user and password
 	server := &ssh.Server{
 		Addr: conf.Listen,
@@ -167,6 +184,9 @@ func main() {
 			if _, ok := conf.Users[ctx.User()]; ok {
 				if conf.Users[ctx.User()] == pass {
 					log.Printf("user %s connected from %s", ctx.User(), ctx.RemoteAddr())
+					if conf.connPolicy(ctx.User(), ctx.RemoteAddr()) {
+						return false
+					}
 					return true
 				}
 			}

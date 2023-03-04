@@ -150,8 +150,10 @@ func main() {
 				for i, s := range conf.activeSessions[user] {
 					// check if the session is older than 30 seconds
 					if time.Since(s.TS) > 30*time.Second {
+						conf.rwLock.Lock()
 						// remove the old session
 						conf.activeSessions[user] = append(conf.activeSessions[user][:i], conf.activeSessions[user][i+1:]...)
+						conf.rwLock.Unlock()
 						break
 					}
 

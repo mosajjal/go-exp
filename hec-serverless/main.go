@@ -68,7 +68,7 @@ var args struct {
 	Source                       string        `arg:"env:HEC_SOURCE" default:"hec_lambda"`
 	Sourcetype                   string        `arg:"env:HEC_SOURCETYPE" default:"hec_lambda"`
 	BatchSize                    int           `arg:"env:HEC_BATCH_SIZE" default:"1"`
-	BatchTimeout                 time.Duration `arg:"env:HEC_BATCH_TIMEOUT" default:"5s"`
+	BatchTimeout                 time.Duration `arg:"env:HEC_BATCH_TIMEOUT" default:"2s"`
 	Balance                      string        `arg:"env:HEC_BALANCE" default:"roundrobin"`
 	StickyTTL                    time.Duration `arg:"env:HEC_STICKY_TTL" default:"5m"`
 	S3URL                        string        `arg:"env:S3_URL" help:"example: https://YOURBUCKET.s3.ap-southeast-2.amazonaws.com/YOURFOLDER/"`
@@ -457,6 +457,7 @@ func (h *HECRuntime) SendSingleEvent(event string) {
 	err := h.SendEvents(eventBatch...)
 	if err != nil {
 		log.Printf("Couldn't send events to HEC. Here's why: %v\n", err)
+		h.FailureS3.Send(eventBatch...)
 	}
 }
 

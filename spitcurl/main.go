@@ -8,10 +8,25 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"moul.io/http2curl/v2"
 )
+
+type headerFlags []string
+
+func (i *headerFlags) String() string {
+	// join by \n
+	return strings.Join(*i, "\n")
+}
+
+func (i *headerFlags) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
+var headerFlag headerFlags
 
 func main() {
 	address := flag.String("address", "127.0.0.1", "Bind address")
@@ -20,6 +35,7 @@ func main() {
 	mode := flag.String("mode", "http", "server type to use. options: http, tls.")
 	tlsCert := flag.String("tlsCert", "", "tls certificate to use. will use self-signed if empty")
 	tlsKey := flag.String("tlsKey", "", "tls certificate key to use. will use self-signed if empty")
+	flag.Var(&headerFlag, "header", "headers to add to the response. Example: -header 'X-My-Header: my-value'")
 
 	flag.Parse()
 	log.SetFormatter(&log.JSONFormatter{})
@@ -63,6 +79,12 @@ func main() {
 	handlerEmpty := func(w http.ResponseWriter, r *http.Request) {
 		command, _ := http2curl.GetCurlCommand(r)
 		fmt.Println(command.String())
+		// write the headers
+		for _, header := range strings.Split(headerFlag.String(), "\n") {
+			// split the header into key and value
+			keyValue := strings.Split(header, ":")
+			w.Header().Add(keyValue[0], keyValue[1])
+		}
 		w.WriteHeader(200)
 		w.Write([]byte(command.String()))
 	}

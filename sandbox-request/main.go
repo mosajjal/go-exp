@@ -112,6 +112,7 @@ func (c *Config) NewContainer(timeoutSeconds uint64) (*Container, error) {
 	defer cancel()
 	// start container with a random port exposed to 6901
 	err = client.StartContainerWithContext(container.ID, &docker.HostConfig{
+		AutoRemove: true,
 		PortBindings: map[docker.Port][]docker.PortBinding{
 			docker.Port(fmt.Sprintf("%s/tcp", c.Service.DockerPort)): {
 				{
@@ -204,7 +205,7 @@ func main() {
 
 		// 301 the user to NoVNC after waiting 5 seconds. TODO: try to do proper healthcheck
 		time.Sleep(5 * time.Second)
-		return c.Redirect(fmt.Sprintf("/novnc/vnc_lite.html?path=%s&password=headless", websockifyURI), http.StatusMovedPermanently)
+		return c.Redirect(fmt.Sprintf("/novnc/vnc.html?path=%s&password=headless", websockifyURI), http.StatusMovedPermanently)
 	})
 
 	// Get the subdirectory /static from the embedded filesystem

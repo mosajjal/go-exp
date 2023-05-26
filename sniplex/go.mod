@@ -3,8 +3,8 @@ module github.com/mosajjal/go-exp/sniplex
 go 1.19
 
 require (
-	github.com/spf13/cobra v1.6.1
-	golang.org/x/exp v0.0.0-20230118134722-a68e582fa157
+	github.com/spf13/cobra v1.7.0
+	inet.af/tcpproxy v0.0.0-20221017015627-91f861402626
 )
 
 require (

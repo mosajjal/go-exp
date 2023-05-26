@@ -15,8 +15,8 @@ import (
 
 func main() {
 
-	cert := flag.String("cert", "server.crt", "cert file for tls. empty means tcp")
-	key := flag.String("key", "server.key", "key file for tls. empty means tcp")
+	cert := flag.String("cert", "", "cert file for tls. empty means tcp")
+	key := flag.String("key", "", "key file for tls. empty means tcp")
 	listen := flag.String("listen", "", "listen address. example: 0.0.0.0:1083")
 	upstream := flag.String("upstream", "", "optional upstream socks5 uri")
 	auth := flag.String("auth", "", "user1:pass1,user2:pass2")

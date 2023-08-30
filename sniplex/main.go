@@ -21,7 +21,7 @@ func main() {
 			// Do Stuff Here
 		},
 	}
-	upstream := rootCmd.PersistentFlags().StringArrayP("upstream", "u", []string{}, "use it: www.google.com,142.250.66.228:443 it can also have default:127.0.0.1:4433 as default")
+	upstream := rootCmd.PersistentFlags().StringArrayP("upstream", "u", []string{}, "use it: www.google.com,142.250.66.228:443 it can also have default,127.0.0.1:4433 as default")
 	bind := rootCmd.PersistentFlags().StringP("bind", "i", "0.0.0.0:443", "which IP to bind to")
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Whoops. There was an error while executing your CLI '%s'", err)

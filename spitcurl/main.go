@@ -1,9 +1,9 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -28,6 +28,37 @@ func (i *headerFlags) Set(value string) error {
 
 var headerFlag headerFlags
 
+func singleJoiningSlash(a, b string) string {
+	aslash := strings.HasSuffix(a, "/")
+	bslash := strings.HasPrefix(b, "/")
+	switch {
+	case aslash && bslash:
+		return a + b[1:]
+	case !aslash && !bslash:
+		return a + "/" + b
+	}
+	return a + b
+}
+func joinURLPath(a, b *url.URL) (path, rawpath string) {
+	if a.RawPath == "" && b.RawPath == "" {
+		return singleJoiningSlash(a.Path, b.Path), ""
+	}
+	// Same as singleJoiningSlash, but uses EscapedPath to determine
+	// whether a slash should be added
+	apath := a.EscapedPath()
+	bpath := b.EscapedPath()
+
+	aslash := strings.HasSuffix(apath, "/")
+	bslash := strings.HasPrefix(bpath, "/")
+
+	switch {
+	case aslash && bslash:
+		return a.Path + b.Path[1:], apath + bpath[1:]
+	case !aslash && !bslash:
+		return a.Path + "/" + b.Path, apath + "/" + bpath
+	}
+	return a.Path + b.Path, apath + bpath
+}
 func main() {
 	address := flag.String("address", "127.0.0.1", "Bind address")
 	port := flag.Uint("port", 8080, "listen port")
@@ -46,7 +77,7 @@ func main() {
 		if err != nil {
 			log.Fatal("fatal Error: ", err)
 		}
-		certFile, err := ioutil.TempFile(os.TempDir(), "spitcurl.pem")
+		certFile, err := os.CreateTemp(os.TempDir(), "spitcurl.pem")
 		if err != nil {
 			log.Fatal("fatal Error: ", err)
 		}
@@ -54,7 +85,7 @@ func main() {
 		certFile.Write(cert)
 		*tlsCert = certFile.Name()
 
-		keyFile, err := ioutil.TempFile(os.TempDir(), "spitcurl.key")
+		keyFile, err := os.CreateTemp(os.TempDir(), "spitcurl.key")
 		if err != nil {
 			log.Fatal("fatal Error: ", err)
 		}
@@ -92,7 +123,26 @@ func main() {
 	if *upstream == "" {
 		http.HandleFunc("/", handlerEmpty)
 	} else {
-		proxy := httputil.NewSingleHostReverseProxy(remote)
+		// proxy := httputil.NewSingleHostReverseProxy(remote)
+
+		director := func(req *http.Request) {
+			targetQuery := remote.RawQuery
+			req.URL.Scheme = remote.Scheme
+			req.URL.Host = remote.Host
+			req.URL.Path, req.URL.RawPath = joinURLPath(remote, req.URL)
+			if targetQuery == "" || req.URL.RawQuery == "" {
+				req.URL.RawQuery = targetQuery + req.URL.RawQuery
+			} else {
+				req.URL.RawQuery = targetQuery + "&" + req.URL.RawQuery
+			}
+		}
+		// skip tls verification on upstream
+		proxy := &httputil.ReverseProxy{Director: director,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+		}
+
 		http.HandleFunc("/", handlerProxy(proxy))
 	}
 

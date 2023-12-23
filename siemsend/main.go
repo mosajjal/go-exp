@@ -8,7 +8,7 @@ import (
 
 var rootCmd = &cobra.Command{Use: "siemsend"}
 
-// generic interface for all outputs for possible multi-output option
+// GenericOutput interface for all outputs for possible multi-output option
 type GenericOutput interface {
 	Send(string)
 	Init() error

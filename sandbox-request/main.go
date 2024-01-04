@@ -23,6 +23,7 @@ import (
 	"time"
 
 	docker "github.com/fsouza/go-dockerclient"
+	"github.com/gofiber/contrib/fiberzerolog"
 	"github.com/gofiber/fiber/v2"
 	"github.com/markbates/goth/providers/azuread"
 
@@ -146,7 +147,7 @@ func main() {
 
 	// Logging Request ID
 	app.Use(requestid.New())
-	app.Use(logger.New(logger.Config{
+	app.Use(fiberzerolog.New(logger.Config{
 		// For more options, see the Config section
 		Format: "${pid} ${user} ${locals:requestid} ${status} - ${method} ${path}\n",
 	}))

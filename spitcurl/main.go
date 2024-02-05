@@ -114,6 +114,9 @@ func main() {
 		for _, header := range strings.Split(headerFlag.String(), "\n") {
 			// split the header into key and value
 			keyValue := strings.Split(header, ":")
+			if len(keyValue) != 2 {
+				continue
+			}
 			w.Header().Add(keyValue[0], keyValue[1])
 		}
 		w.WriteHeader(200)

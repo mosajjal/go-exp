@@ -10,10 +10,15 @@ webserver:
   azuread_key: "AZUREAD_KEY" # used only if auth_provider is azuread
   azuread_secret: "AZUREAD_SECRET" # used only if auth_provider is azuread
   azuread_callback: "http://localhost:3000/auth/azuread/callback" # used only if auth_provider is azuread
-
-service:
   timeout_default: 30
   timeout_max: 3000
-  provider: "docker" # only option for now
-  docker_image: "docker.io/accetto/ubuntu-vnc-xfce-chromium-g3:latest"
-  docker_port: "6901"
+
+services:
+  Chromium:
+    provider: "docker" # only option for now
+    docker_image: "docker.io/accetto/ubuntu-vnc-xfce-chromium-g3:latest"
+    docker_port: "6901"
+  Firefox:
+    provider: "docker" # only option for now
+    docker_image: "docker.io/accetto/ubuntu-vnc-xfce-firefox-g3:latest"
+    docker_port: "6901"

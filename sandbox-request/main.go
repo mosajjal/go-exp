@@ -29,7 +29,6 @@ import (
 
 	"github.com/gofiber/fiber/v2/middleware/basicauth"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
-	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/gofiber/websocket/v2"
 )
@@ -61,7 +60,7 @@ func GetFreePort() (int, error) {
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
-func (c *Config) NewContainer(timeoutSeconds uint64) (*Container, error) {
+func (c *Config) NewContainer(timeoutSeconds uint64, service string) (*Container, error) {
 	randomPort, err := GetFreePort()
 	if err != nil {
 		return nil, err
@@ -71,9 +70,12 @@ func (c *Config) NewContainer(timeoutSeconds uint64) (*Container, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	serviceConfig := c.Services[service]
+
 	// pull image
 	err = client.PullImage(docker.PullImageOptions{
-		Repository: c.Service.DockerImage,
+		Repository: serviceConfig.DockerImage,
 	}, docker.AuthConfiguration{})
 	if err != nil {
 		return nil, err
@@ -81,12 +83,12 @@ func (c *Config) NewContainer(timeoutSeconds uint64) (*Container, error) {
 	// create container
 	container, err := client.CreateContainer(docker.CreateContainerOptions{
 		Config: &docker.Config{
-			Image: c.Service.DockerImage,
+			Image: serviceConfig.DockerImage,
 			Tty:   true,
 			ExposedPorts: map[docker.Port]struct{}{
-				docker.Port(fmt.Sprintf("%s/tcp", c.Service.DockerPort)): {},
+				docker.Port(fmt.Sprintf("%s/tcp", serviceConfig.DockerPort)): {},
 			},
-			PortSpecs: []string{c.Service.DockerPort},
+			PortSpecs: []string{serviceConfig.DockerPort},
 			Entrypoint: []string{
 				"timeout",
 				fmt.Sprintf("%d", timeoutSeconds),
@@ -95,8 +97,9 @@ func (c *Config) NewContainer(timeoutSeconds uint64) (*Container, error) {
 				"/dockerstartup/startup.sh"},
 		},
 		HostConfig: &docker.HostConfig{
+			AutoRemove: true,
 			PortBindings: map[docker.Port][]docker.PortBinding{
-				docker.Port(fmt.Sprintf("%s/tcp", c.Service.DockerPort)): {
+				docker.Port(fmt.Sprintf("%s/tcp", serviceConfig.DockerPort)): {
 					{
 						HostIP:   "127.0.0.1",
 						HostPort: fmt.Sprintf("%d", randomPort),
@@ -115,7 +118,7 @@ func (c *Config) NewContainer(timeoutSeconds uint64) (*Container, error) {
 	err = client.StartContainerWithContext(container.ID, &docker.HostConfig{
 		AutoRemove: true,
 		PortBindings: map[docker.Port][]docker.PortBinding{
-			docker.Port(fmt.Sprintf("%s/tcp", c.Service.DockerPort)): {
+			docker.Port(fmt.Sprintf("%s/tcp", serviceConfig.DockerPort)): {
 				{
 					HostIP:   "127.0.0.1",
 					HostPort: fmt.Sprintf("%d", randomPort),
@@ -136,6 +139,14 @@ func (c *Config) NewContainer(timeoutSeconds uint64) (*Container, error) {
 // the key is the container ID
 var RunningContainers = make(map[string]*Container)
 
+func keys[K comparable, V any](m map[K]V) []K {
+	keys := make([]K, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 func main() {
 
 	// flag to read the config file path
@@ -147,9 +158,11 @@ func main() {
 
 	// Logging Request ID
 	app.Use(requestid.New())
-	app.Use(fiberzerolog.New(logger.Config{
+	app.Use(fiberzerolog.New(fiberzerolog.Config{
 		// For more options, see the Config section
-		Format: "${pid} ${user} ${locals:requestid} ${status} - ${method} ${path}\n",
+		Fields: []string{fiberzerolog.FieldRequestID, fiberzerolog.FieldIP,
+			fiberzerolog.FieldIPs, fiberzerolog.FieldLatency, fiberzerolog.FieldStatus,
+			fiberzerolog.FieldMethod, fiberzerolog.FieldURL, fiberzerolog.FieldError},
 	}))
 
 	if config.Webserver.AuthProvider == "basic" {
@@ -166,11 +179,14 @@ func main() {
 	// an index page with a form to request a container
 	app.Get("/", func(c *fiber.Ctx) error {
 
+		fmt.Println(keys(config.Services))
+
 		c.Set("Content-Type", "text/html")
 		template := template.Must(template.New("index").Parse(indexHTML))
-		template.Execute(c, map[string]string{
-			"DefaultTimeout": fmt.Sprintf("%d", config.Service.TimeoutDefault),
-			"MaxTimeout":     fmt.Sprintf("%d", config.Service.TimeoutMax),
+		template.Execute(c, map[string]any{
+			"DefaultTimeout": fmt.Sprintf("%d", config.Webserver.TimeoutDefault),
+			"MaxTimeout":     fmt.Sprintf("%d", config.Webserver.TimeoutMax),
+			"Services":       keys(config.Services),
 		})
 		return nil
 	})
@@ -191,8 +207,18 @@ func main() {
 				"error": "timeout too long",
 			})
 		}
+
+		service := c.FormValue("service")
+		// get the service from the config
+		_, ok := config.Services[service]
+		if !ok {
+			return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+				"error": "invalid service",
+			})
+		}
+
 		// create container
-		container, err := config.NewContainer(timeoutSeconds)
+		container, err := config.NewContainer(timeoutSeconds, service)
 		if err != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"error": err.Error(),

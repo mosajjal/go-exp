@@ -317,6 +317,8 @@ const UI = {
     },
 
     addConnectionControlHandlers() {
+        document.getElementById("noVNC_home_button")
+            .addEventListener('click', UI.go_home);
         document.getElementById("noVNC_disconnect_button")
             .addEventListener('click', UI.disconnect);
         document.getElementById("noVNC_connect_button")
@@ -1063,6 +1065,10 @@ const UI = {
         UI.rfb.showDotCursor = UI.getSetting('show_dot');
 
         UI.updateViewOnly(); // requires UI.rfb
+    },
+
+    go_home() {
+        window.location.href = "/";
     },
 
     disconnect() {

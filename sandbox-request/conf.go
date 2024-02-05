@@ -3,26 +3,27 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
 	Webserver struct {
-		Listen          string `yaml:"listen"`
-		EnableTLS       bool   `yaml:"enable_tls"`
-		TLSCert         string `yaml:"tls_cert"`
-		TLSKey          string `yaml:"tls_key"`
-		TLSClientAuth   bool   `yaml:"tls_client_auth"`
-		TLSClientCA     string `yaml:"tls_client_ca"`
-		TLSClientCAPath string `yaml:"tls_client_ca_path"`
-		AuthProvider    string `yaml:"auth_provider"`
-		Users           map[string]string
-		AzureADKey      string `yaml:"azuread_key"`
-		AzureADSecret   string `yaml:"azuread_secret"`
-		AzureADCallback string `yaml:"azuread_callback"`
-		TimeoutDefault  int    `yaml:"timeout_default"`
-		TimeoutMax      int    `yaml:"timeout_max"`
+		Listen          string            `yaml:"listen"`
+		EnableTLS       bool              `yaml:"enable_tls"`
+		TLSCert         string            `yaml:"tls_cert"`
+		TLSKey          string            `yaml:"tls_key"`
+		TLSClientAuth   bool              `yaml:"tls_client_auth"`
+		TLSClientCA     string            `yaml:"tls_client_ca"`
+		TLSClientCAPath string            `yaml:"tls_client_ca_path"`
+		AuthProvider    string            `yaml:"auth_provider"`
+		Users           map[string]string `yaml:"users"`
+		AzureADKey      string            `yaml:"azuread_key"`
+		AzureADSecret   string            `yaml:"azuread_secret"`
+		AzureADCallback string            `yaml:"azuread_callback"`
+		TimeoutDefault  time.Duration     `yaml:"timeout_default"`
+		TimeoutMax      time.Duration     `yaml:"timeout_max"`
 	} `yaml:"webserver"`
 	Services map[string]struct {
 		Provider    string `yaml:"provider"`

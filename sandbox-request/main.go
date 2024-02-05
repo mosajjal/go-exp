@@ -18,7 +18,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"strconv"
 	"text/template"
 	"time"
 
@@ -60,7 +59,7 @@ func GetFreePort() (int, error) {
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
-func (c *Config) NewContainer(timeoutSeconds uint64, service string) (*Container, error) {
+func (c *Config) NewContainer(containerTime time.Duration, service string) (*Container, error) {
 	randomPort, err := GetFreePort()
 	if err != nil {
 		return nil, err
@@ -91,7 +90,7 @@ func (c *Config) NewContainer(timeoutSeconds uint64, service string) (*Container
 			PortSpecs: []string{serviceConfig.DockerPort},
 			Entrypoint: []string{
 				"timeout",
-				fmt.Sprintf("%d", timeoutSeconds),
+				fmt.Sprintf("%d", int64(containerTime.Seconds())),
 				"/usr/bin/tini",
 				"--",
 				"/dockerstartup/startup.sh"},
@@ -184,8 +183,8 @@ func main() {
 		c.Set("Content-Type", "text/html")
 		template := template.Must(template.New("index").Parse(indexHTML))
 		template.Execute(c, map[string]any{
-			"DefaultTimeout": fmt.Sprintf("%d", config.Webserver.TimeoutDefault),
-			"MaxTimeout":     fmt.Sprintf("%d", config.Webserver.TimeoutMax),
+			"DefaultTimeout": config.Webserver.TimeoutDefault,
+			"MaxTimeout":     config.Webserver.TimeoutMax,
 			"Services":       keys(config.Services),
 		})
 		return nil
@@ -195,16 +194,17 @@ func main() {
 	app.Post("/new_container", func(c *fiber.Ctx) error {
 		// get the timeout from the request
 		timeout := c.FormValue("timeout")
-		// try to convert to uint64
-		timeoutSeconds, err := strconv.ParseUint(timeout, 10, 64)
+		// parse the timeout
+		timeoutDuration, err := time.ParseDuration(timeout)
 		if err != nil {
 			return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 				"error": "invalid timeout",
 			})
 		}
-		if timeoutSeconds > 3000 {
+		// check if the timeout is within the limits
+		if timeoutDuration < config.Webserver.TimeoutDefault || timeoutDuration > config.Webserver.TimeoutMax {
 			return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-				"error": "timeout too long",
+				"error": "timeout out of range",
 			})
 		}
 
@@ -218,7 +218,7 @@ func main() {
 		}
 
 		// create container
-		container, err := config.NewContainer(timeoutSeconds, service)
+		container, err := config.NewContainer(timeoutDuration, service)
 		if err != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"error": err.Error(),

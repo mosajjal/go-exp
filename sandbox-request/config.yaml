@@ -3,15 +3,15 @@ webserver:
   enable_tls: false
   tls_cert: "/path/to/cert.pem"
   tls_key: "/path/to/key.pem"
-  auth_provider: basic # options: basic, azuread
+  auth_provider: basic # options: basic, azuread, none
   users: # used only if auth_provider is basic
     "admin": "admin"
     "user": "user"
   azuread_key: "AZUREAD_KEY" # used only if auth_provider is azuread
   azuread_secret: "AZUREAD_SECRET" # used only if auth_provider is azuread
   azuread_callback: "http://localhost:3000/auth/azuread/callback" # used only if auth_provider is azuread
-  timeout_default: 30
-  timeout_max: 3000
+  timeout_default: 5m
+  timeout_max: 1h
 
 services:
   Chromium:

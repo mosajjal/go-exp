@@ -8,9 +8,7 @@ the application (optionally) authenticates with oAtuh2, then presents a form to 
 
 ```yaml
 webserver:
-  # port to listen to
   listen: "0.0.0.0:3000"
-  # enable TLS for the web service and the certificates
   enable_tls: false
   tls_cert: "/path/to/cert.pem"
   tls_key: "/path/to/key.pem"
@@ -21,13 +19,19 @@ webserver:
   azuread_key: "AZUREAD_KEY" # used only if auth_provider is azuread
   azuread_secret: "AZUREAD_SECRET" # used only if auth_provider is azuread
   azuread_callback: "http://localhost:3000/auth/azuread/callback" # used only if auth_provider is azuread
+  timeout_default: 5m
+  timeout_max: 1h
 
-service:
-  timeout_default: 30
-  timeout_max: 3000
-  provider: "docker" # only option for now
-  docker_image: "docker.io/accetto/ubuntu-vnc-xfce-chromium-g3:latest"
-  docker_port: "6901"
+services:
+  Chromium:
+    provider: "docker" # only option for now
+    docker_image: "docker.io/accetto/ubuntu-vnc-xfce-chromium-g3:latest"
+    docker_port: "6901"
+  Firefox:
+    provider: "docker" # only option for now
+    docker_image: "docker.io/accetto/ubuntu-vnc-xfce-firefox-g3:latest"
+    docker_port: "6901"
+
 ```
 
 ## How to run

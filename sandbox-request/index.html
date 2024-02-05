@@ -6,8 +6,8 @@
         <form id="contact" action="/new_container" method="post">
             <h3>Request a Sandbox</h3>
             <fieldset>
-                <h4>Session Time (seconds). Maximum: {{.MaxTimeout}}</h4>
-                <input placeholder="Session Time (seconds)" name="timeout" id="timeout" value="{{.DefaultTimeout}}" type="text" tabindex="1" required autofocus>
+                <h4>Session Time. Maximum: {{.MaxTimeout}}. use <a href="https://en.wikipedia.org/wiki/ISO_8601#Durations" target="_blank">this</a> format </h4>
+                <input placeholder="Session Time (Minutes)" name="timeout" id="timeout" value="{{.DefaultTimeout}}" type="text" tabindex="1" required autofocus>
             </fieldset>
             <fieldset>
                 <h4>Service</h4>

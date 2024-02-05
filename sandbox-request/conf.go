@@ -26,9 +26,13 @@ type Config struct {
 		TimeoutMax      time.Duration     `yaml:"timeout_max"`
 	} `yaml:"webserver"`
 	Services map[string]struct {
-		Provider    string `yaml:"provider"`
-		DockerImage string `yaml:"docker_image"`
-		DockerPort  string `yaml:"docker_port"`
+		Provider        string   `yaml:"provider"`
+		DockerImage     string   `yaml:"docker_image"`
+		DockerPort      string   `yaml:"docker_port"`
+		DockerPortType  string   `yaml:"docker_port_type"` // either kasm or novnc
+		DockerPortIsTLS bool     `yaml:"docker_port_is_tls"`
+		Entrypoint      []string `yaml:"entrypoint"`
+		Env             []string `yaml:"env"`
 	} `yaml:"services"`
 }
 

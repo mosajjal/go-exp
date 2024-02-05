@@ -34,8 +34,10 @@ import (
 
 type Container struct {
 	// container id
-	ID       string
-	Endpoint string
+	ID            string
+	Endpoint      string
+	EndpointType  string
+	IsEndpointTLS bool
 }
 
 //go:embed noVNC/*
@@ -87,13 +89,12 @@ func (c *Config) NewContainer(containerTime time.Duration, service string) (*Con
 			ExposedPorts: map[docker.Port]struct{}{
 				docker.Port(fmt.Sprintf("%s/tcp", serviceConfig.DockerPort)): {},
 			},
+			Env:       serviceConfig.Env,
 			PortSpecs: []string{serviceConfig.DockerPort},
-			Entrypoint: []string{
+			Entrypoint: append([]string{
 				"timeout",
 				fmt.Sprintf("%d", int64(containerTime.Seconds())),
-				"/usr/bin/tini",
-				"--",
-				"/dockerstartup/startup.sh"},
+			}, serviceConfig.Entrypoint...),
 		},
 		HostConfig: &docker.HostConfig{
 			AutoRemove: true,
@@ -130,8 +131,10 @@ func (c *Config) NewContainer(containerTime time.Duration, service string) (*Con
 	}
 	// return container
 	return &Container{
-		ID:       container.ID,
-		Endpoint: fmt.Sprintf("127.0.0.1:%d", randomPort),
+		ID:            container.ID,
+		Endpoint:      fmt.Sprintf("127.0.0.1:%d", randomPort),
+		EndpointType:  serviceConfig.DockerPortType,
+		IsEndpointTLS: serviceConfig.DockerPortIsTLS,
 	}, nil
 }
 
@@ -177,9 +180,6 @@ func main() {
 
 	// an index page with a form to request a container
 	app.Get("/", func(c *fiber.Ctx) error {
-
-		fmt.Println(keys(config.Services))
-
 		c.Set("Content-Type", "text/html")
 		template := template.Must(template.New("index").Parse(indexHTML))
 		template.Execute(c, map[string]any{
@@ -227,12 +227,20 @@ func main() {
 		// add to running containers
 		RunningContainers[container.ID] = container
 
-		websockifyURI := fmt.Sprintf("view/%s/websockify", container.ID)
-		fmt.Println(websockifyURI)
-
-		// 301 the user to NoVNC after waiting 5 seconds. TODO: try to do proper healthcheck
-		time.Sleep(5 * time.Second)
-		return c.Redirect(fmt.Sprintf("/novnc/vnc.html?path=%s&password=headless", websockifyURI), http.StatusMovedPermanently)
+		if container.EndpointType == "novnc" {
+			websockifyURI := fmt.Sprintf("view/%s/websockify", container.ID)
+			// 301 the user to NoVNC after waiting 5 seconds. TODO: try to do proper healthcheck
+			time.Sleep(5 * time.Second)
+			return c.Redirect(fmt.Sprintf("/novnc/vnc.html?path=%s&password=headless", websockifyURI), http.StatusMovedPermanently)
+		}
+		if container.EndpointType == "kasm" {
+			// set up a reverse proxy to the container
+			time.Sleep(5 * time.Second)
+			return c.Redirect(fmt.Sprintf("/kasm/%s", container.ID), http.StatusMovedPermanently)
+		}
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error": "invalid endpoint type",
+		})
 	})
 
 	// Get the subdirectory /static from the embedded filesystem
@@ -255,7 +263,11 @@ func main() {
 			log.Println("container not found")
 			return
 		}
-		err := Proxy(c, fmt.Sprintf("ws://%s/websockify", container.Endpoint))
+		scheme := "ws"
+		if container.IsEndpointTLS {
+			scheme = "wss"
+		}
+		err := Proxy(c, fmt.Sprintf("%s://%s/websockify", scheme, container.Endpoint))
 		if err != nil {
 			log.Println(err)
 		}

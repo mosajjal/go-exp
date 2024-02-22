@@ -63,7 +63,8 @@ func main() {
 	)
 	proxy.OnRequest().HandleConnectFunc(
 		func(host string, ctx *goproxy.ProxyCtx) (*goproxy.ConnectAction, string) {
-			if _, _, ok := tree.LongestPrefix(Reverse(host)); !ok {
+			h := strings.SplitN(host, ":", 2)[0]
+			if _, _, ok := tree.LongestPrefix(Reverse(h)); !ok {
 				return goproxy.RejectConnect, host
 			}
 			return goproxy.OkConnect, host

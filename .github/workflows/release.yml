@@ -18,4 +18,4 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         goos: ${{ matrix.goos }}
         goarch: ${{ matrix.goarch }}
-        projects: ${{ matrix.projects }}
+        project_path: ${{ matrix.projects }}

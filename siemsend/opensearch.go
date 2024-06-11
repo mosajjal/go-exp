@@ -103,13 +103,14 @@ func (s Opensearch) Send(cmd *cobra.Command, args []string) {
 			Body:       bytes.NewReader([]byte(scanner.Text())),
 			Refresh:    "false",
 			DocumentID: fmt.Sprintf("%d", cnt),
-			Timeout:    2 * time.Second,
+			Timeout:    2 * time.Second, //TODO: make it configurable
 		}.Do(ctx, client)
 		if err != nil {
 			log.Warn(err)
 		}
 		if res.StatusCode != 201 {
-			log.Warnf("insert failed")
+			log.Warnf("insert failed with status code %d", res.StatusCode)
+			log.Infof("the server response: %s", res.String())
 		}
 		// _, err := client.Index().
 		// 	Index(s.Index).

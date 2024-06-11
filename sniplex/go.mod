@@ -1,10 +1,10 @@
 module github.com/mosajjal/go-exp/sniplex
 
-go 1.19
+go 1.22
 
 require (
-	github.com/spf13/cobra v1.7.0
-	inet.af/tcpproxy v0.0.0-20221017015627-91f861402626
+	github.com/spf13/cobra v1.8.0
+	inet.af/tcpproxy v0.0.0-20231102063150-2862066fc2a9
 )
 
 require (

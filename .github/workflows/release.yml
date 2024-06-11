@@ -20,3 +20,4 @@ jobs:
         goarch: ${{ matrix.goarch }}
         project_path: ${{ matrix.projects }}
         asset_name: ${{ matrix.projects }}-${{ matrix.goos }}-${{ matrix.goarch}}
+        binary_name: ${{ matrix.projects }}

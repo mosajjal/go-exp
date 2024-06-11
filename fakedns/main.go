@@ -46,7 +46,7 @@ type TreeValue struct {
 }
 
 var dnsLock sync.RWMutex
-var log = slog.New(slog.NewTextHandler(os.Stderr))
+var log = slog.New(slog.NewTextHandler(os.Stderr, nil))
 var dnslog = slog.New(log.Handler().WithAttrs([]slog.Attr{{Key: "service", Value: slog.StringValue("dns")}}))
 
 // inDomainList returns true if the domain is meant to be SKIPPED and not go through sni proxy

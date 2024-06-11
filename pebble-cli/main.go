@@ -110,7 +110,8 @@ func dump(cmd *cobra.Command, args []string) {
 	db, err := pebble.Open(cmd.Flag("path").Value.String(), &pebble.Options{MaxOpenFiles: 512})
 	errorHandler(err)
 
-	iter := db.NewIter(nil)
+	iter, err := db.NewIter(nil)
+	errorHandler(err)
 	for iter.First(); iter.Valid(); iter.Next() {
 		fmt.Printf("%s,%s\n", iter.Key(), iter.Value())
 	}

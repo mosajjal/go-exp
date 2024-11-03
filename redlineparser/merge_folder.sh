@@ -13,7 +13,7 @@ do
 done
 
 # to clean up the folder, you can move all the all_* files into a new folder, remove all the parquet files, and move the all_* files back to the root folder
-# mkdir aggregated && mv all_* aggregated/ && rm *.parquet && mv aggregated/* . && rm -rf aggregated
+mkdir aggregated && mv all_* aggregated/ && rm *.parquet && mv aggregated/* . && rm -rf aggregated
 
 # now that each folder has a few parquet files, you can merge the similar ones in different directories into one
 # for prefix in $prefixes

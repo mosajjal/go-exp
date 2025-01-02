@@ -6,6 +6,7 @@ An alternative to proxychains using Linux Network Namespaces and tun2socks
 
 - Uses kernel network namespaces instead of LD_PRELOAD hooks
 - Cannot be bypassed by statically linked binaries
+- MagicDNS to automatically redirect all the DNS requests to a remote DNS server (DoT, DoH, DoQ, TCP supported)
 
 ## Requirements
 
@@ -31,20 +32,28 @@ sudo nsenter --net=/run/netns/gopherchain curl ipinfo.io
 ```
 
 > [!WARNING]
-> if you get a DNS error, you might need to set your host DNS server to an IP other than localhost or unreachable networks.
+> if you get a DNS error, you might need to set your host DNS server to an IP other than localhost or unreachable networks
+> or use the -magicdns flag 
 
 
 ## Configuration
 
 ```
 usage of ./gopherchain
-
   -device string
-        TUN device name [GOPHERCHAIN_DEVICE] (default "tun0random")
+        TUN device name [GOPHERCHAIN_DEVICE] (default "gopherchaintun0")
   -ipmask string
-        IP address of the TUN device [GOPHERCHAIN_IPMASK] (default "10.20.30.1/32")
+        IP address of the TUN device [GOPHERCHAIN_IPMASK] (default "100.200.200.1/32")
   -loglevel string
         Log level [GOPHERCHAIN_LOGLEVEL] (default "debug")
+  -magicdns string
+        if a dns server value is specified,
+                starts a local dns server and forwards all traffic to udp53 to this dns server
+          - udp://1.1.1.1:53
+          - tcp://9.9.9.9:5353
+          - https://dns.adguard.com
+          - quic://dns.adguard.com:8853
+          - tcp-tls://dns.adguard.com:853 [GOPHERCHAIN_MAGICDNS]
   -nsname string
         Name of the new network namespace [GOPHERCHAIN_NSNAME] (default "gopherchain")
   -proxy string

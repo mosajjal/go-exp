@@ -51,6 +51,31 @@ usage of ./gopherchain
         Proxy address. can't be localhost [GOPHERCHAIN_PROXY] (default "socks5://10.1.1.1:1080")
 ```
 
+## Use in Systemd
+
+After gopherchain is installed and running, you can start any systemd unit in the namespace by adding the following lines to the unit file:
+
+```ini
+[Unit]
+Description=My Service
+# netns.service sets up the network namespace
+After=network-online.target
+Requires=network-online.target
+
+[Service]
+Type=simple
+# The following doesn't work, app starts but every network request fails
+NetworkNamespacePath=/run/netns/gopherchain
+User=root
+Group=root
+ExecStart=/usr/bin/app
+
+[Install]
+WantedBy=multi-user.target
+```
+
+note that the same DNS issue applies here. you might need to set the DNS server in the namespace to a reachable IP through the SOCKS proxy.
+additionally, you need to make sure your SOCKS5 proxy supports handling UDP packets.
 
 ### Security Notes
 - All DNS requests are routed through the proxy

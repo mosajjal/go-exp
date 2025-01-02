@@ -152,16 +152,22 @@ func main() {
 		return
 	}
 
-	info := fmt.Sprintf(`** Gopherchain is running **
+	info := fmt.Sprintf(`** Gopherchain has started **
 
 A tun device is created and moved to the new network namespace
-You can run the following command to check the TUN device in the new network namespace
+you have several options to interact with the new network namespace
+
+1) Use the nsenter command. replace ip link show with any command, or bash to put the entire bash session in the new network namespace
 
 $ sudo nsenter -t %d -n ip link show
 
-Alternatively, you can use the named namespace path
+2) use the named namespace path
 	
 $ sudo nsenter --net=/run/netns/%s ip link show
+
+3) use the ip netns command
+
+$ sudo ip netns exec gopherchain ip link show
 
 Press Ctrl+C to delete the new network namespace and exit`, os.Getpid(), *nsName)
 
